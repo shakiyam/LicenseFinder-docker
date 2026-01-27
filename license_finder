@@ -1,0 +1,23 @@
+#!/bin/bash
+set -Eeu -o pipefail
+
+if command -v docker &>/dev/null; then
+  docker container run \
+    --name "license_finder_$(uuidgen | head -c8)" \
+    --rm \
+    -t \
+    -u "$(id -u):$(id -g)" \
+    -v "$PWD":/scan:ro \
+    ghcr.io/shakiyam/license_finder "$@"
+elif command -v podman &>/dev/null; then
+  podman container run \
+    --name "license_finder_$(uuidgen | head -c8)" \
+    --rm \
+    --security-opt label=disable \
+    -t \
+    -v "$PWD":/scan:ro \
+    ghcr.io/shakiyam/license_finder "$@"
+else
+  echo 'Neither docker nor podman is installed.' >&2
+  exit 1
+fi
