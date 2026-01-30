@@ -2,22 +2,83 @@
 set -Eeu -o pipefail
 
 if command -v docker &>/dev/null; then
-  docker container run \
-    --name "license_finder_$(uuidgen | head -c8)" \
-    --rm \
-    -t \
-    -u "$(id -u):$(id -g)" \
-    -v "$PWD":/scan:ro \
-    ghcr.io/shakiyam/license_finder "$@"
+  DOCKER=docker
 elif command -v podman &>/dev/null; then
-  podman container run \
-    --name "license_finder_$(uuidgen | head -c8)" \
-    --rm \
-    --security-opt label=disable \
-    -t \
-    -v "$PWD":/scan:ro \
-    ghcr.io/shakiyam/license_finder "$@"
+  DOCKER=podman
 else
   echo 'Neither docker nor podman is installed.' >&2
   exit 1
 fi
+readonly DOCKER
+
+# Parse --from-image option
+from_image=""
+args=()
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --from-image)
+      from_image="$2"
+      shift 2
+      ;;
+    --from-image=*)
+      from_image="${1#*=}"
+      shift
+      ;;
+    *)
+      args+=("$1")
+      shift
+      ;;
+  esac
+done
+readonly FROM_IMAGE="$from_image"
+
+temp_container=""
+temp_dir=""
+
+cleanup() {
+  if [[ -n "$temp_container" ]]; then
+    $DOCKER rm -f "$temp_container" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "$temp_dir" ]]; then
+    rm -rf "$temp_dir"
+  fi
+}
+trap cleanup EXIT
+
+if [[ -n "$FROM_IMAGE" ]]; then
+  temp_container="lf_gems_$(uuidgen | head -c8)"
+  temp_dir=$(mktemp -d)
+  $DOCKER create --name "$temp_container" "$FROM_IMAGE" >/dev/null
+  bundle_path=/usr/local/bundle
+  while IFS='=' read -r key value; do
+    if [[ "$key" == "BUNDLE_APP_CONFIG" ]]; then
+      bundle_path="$value"
+      break
+    fi
+  done < <($DOCKER inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$FROM_IMAGE")
+  readonly BUNDLE_PATH="$bundle_path"
+  $DOCKER cp "$temp_container":"$BUNDLE_PATH" "$temp_dir"/bundle
+  RUBY_GEM_DIR=$($DOCKER run --rm --entrypoint ruby "$FROM_IMAGE" -e 'puts Gem.default_dir' 2>/dev/null | tr -d '\r')
+  readonly RUBY_GEM_DIR
+  if [[ -n "$RUBY_GEM_DIR" ]] && $DOCKER cp "$temp_container":"$RUBY_GEM_DIR" "$temp_dir"/ruby_gems 2>/dev/null; then
+    cp -rn "$temp_dir"/ruby_gems/specifications/* "$temp_dir"/bundle/specifications/ 2>/dev/null || true
+    cp -rn "$temp_dir"/ruby_gems/gems/* "$temp_dir"/bundle/gems/ 2>/dev/null || true
+    cp -rn "$temp_dir"/ruby_gems/extensions/* "$temp_dir"/bundle/extensions/ 2>/dev/null || true
+    rm -rf "$temp_dir"/ruby_gems
+  fi
+  $DOCKER rm -f "$temp_container" >/dev/null
+fi
+
+run_opts=(-t -v "$PWD":/scan:ro -u "$(id -u):$(id -g)")
+if [[ "$DOCKER" == "podman" ]]; then
+  run_opts+=(--security-opt label=disable)
+fi
+if [[ -n "$temp_dir" ]]; then
+  run_opts+=(-v "$temp_dir"/bundle:/usr/local/bundle:ro)
+fi
+
+$DOCKER container run \
+  --name "license_finder_$(uuidgen | head -c8)" \
+  --rm \
+  "${run_opts[@]}" \
+  ghcr.io/shakiyam/license_finder "${args[@]+${args[@]}}"

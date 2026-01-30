@@ -1,13 +1,24 @@
 LicenseFinder-docker
 ====================
 
-[LicenseFinder](https://github.com/pivotal/LicenseFinder) Docker Image for Ruby 
+[LicenseFinder](https://github.com/pivotal/LicenseFinder) Docker Image for Ruby
+
 How to Use
 ----------
 
 ```console
-docker container run --rm -t -u "$(id -u):$(id -g)" -v "$PWD":/scan:ro ghcr.io/shakiyam/license_finder
+./license_finder
 ```
+
+### Scanning with a pre-built image
+
+If your project's gems are already installed in a Docker image, use `--from-image` to scan against that image:
+
+```console
+./license_finder --from-image my-ruby-app:latest
+```
+
+This extracts the installed gems from the specified image and uses them for license analysis, avoiding the need to run `bundle install`.
 
 Other Languages
 ---------------
