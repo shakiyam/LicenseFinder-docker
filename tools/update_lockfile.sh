@@ -6,7 +6,7 @@ readonly SCRIPT_DIR
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR"/colored_echo.sh
 
-readonly RUBY_IMAGE="public.ecr.aws/docker/library/ruby:4.0.1-slim-trixie"
+readonly RUBY_IMAGE="public.ecr.aws/docker/library/ruby:4.0.2-slim-trixie"
 
 exit_flag=false
 while getopts ':e' flag; do
