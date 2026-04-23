@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/ruby:4.0.2-slim-trixie
+FROM public.ecr.aws/docker/library/ruby:4.0.3-slim-trixie
 WORKDIR /root
 COPY Gemfile /root/
 COPY Gemfile.lock /root/
