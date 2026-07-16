@@ -1,4 +1,4 @@
-FROM docker.io/library/ruby:4.0.5-slim-trixie
+FROM docker.io/library/ruby:4.0.6-slim-trixie
 WORKDIR /root
 COPY Gemfile /root/
 COPY Gemfile.lock /root/
