@@ -15,4 +15,6 @@ WORKDIR /scan
 VOLUME /scan
 USER nobody:nogroup
 ENV HOME=/tmp
+ARG SOURCE_COMMIT
+ENV SOURCE_COMMIT=$SOURCE_COMMIT
 ENTRYPOINT ["license_finder"]
