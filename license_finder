@@ -1,17 +1,22 @@
 #!/bin/bash
 set -Eeu -o pipefail
 
-if command -v docker &>/dev/null; then
-  DOCKER=docker
-elif command -v podman &>/dev/null; then
-  DOCKER=podman
-else
-  echo 'Neither docker nor podman is installed.' >&2
-  exit 1
-fi
-readonly DOCKER
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+readonly SCRIPT_DIR
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR"/tools/colored_echo.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR"/tools/container_engine.sh
 
-# Parse --from-image option
+CONTAINER_ENGINE=$(detect_container_engine)
+readonly CONTAINER_ENGINE
+if [[ $CONTAINER_ENGINE == docker ]]; then
+  ENGINE_OPTS=(-u "$(id -u):$(id -g)")
+else
+  ENGINE_OPTS=(--security-opt label=disable)
+fi
+readonly ENGINE_OPTS
+
 from_image=""
 args=()
 while [[ $# -gt 0 ]]; do
@@ -37,7 +42,7 @@ temp_dir=""
 
 cleanup() {
   if [[ -n "$temp_container" ]]; then
-    $DOCKER rm -f "$temp_container" >/dev/null 2>&1 || true
+    $CONTAINER_ENGINE rm -f "$temp_container" >/dev/null 2>&1 || true
   fi
   if [[ -n "$temp_dir" ]]; then
     rm -rf "$temp_dir"
@@ -48,37 +53,38 @@ trap cleanup EXIT
 if [[ -n "$FROM_IMAGE" ]]; then
   temp_container="lf_gems_$(uuidgen | head -c8)"
   temp_dir=$(mktemp -d)
-  $DOCKER create --name "$temp_container" "$FROM_IMAGE" >/dev/null
+  $CONTAINER_ENGINE create --name "$temp_container" "$FROM_IMAGE" >/dev/null
   bundle_path=/usr/local/bundle
   while IFS='=' read -r key value; do
     if [[ "$key" == "BUNDLE_APP_CONFIG" ]]; then
       bundle_path="$value"
       break
     fi
-  done < <($DOCKER inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$FROM_IMAGE")
+  done < <($CONTAINER_ENGINE inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$FROM_IMAGE")
   readonly BUNDLE_PATH="$bundle_path"
-  $DOCKER cp "$temp_container":"$BUNDLE_PATH" "$temp_dir"/bundle
-  RUBY_GEM_DIR=$($DOCKER run --rm --entrypoint ruby "$FROM_IMAGE" -e 'puts Gem.default_dir' 2>/dev/null | tr -d '\r')
+  $CONTAINER_ENGINE cp "$temp_container":"$BUNDLE_PATH" "$temp_dir"/bundle
+  RUBY_GEM_DIR=$($CONTAINER_ENGINE run --rm --entrypoint ruby "$FROM_IMAGE" -e 'puts Gem.default_dir' 2>/dev/null | tr -d '\r')
   readonly RUBY_GEM_DIR
-  if [[ -n "$RUBY_GEM_DIR" ]] && $DOCKER cp "$temp_container":"$RUBY_GEM_DIR" "$temp_dir"/ruby_gems 2>/dev/null; then
+  if [[ -n "$RUBY_GEM_DIR" ]] && $CONTAINER_ENGINE cp "$temp_container":"$RUBY_GEM_DIR" "$temp_dir"/ruby_gems 2>/dev/null; then
     cp -rn "$temp_dir"/ruby_gems/specifications/* "$temp_dir"/bundle/specifications/ 2>/dev/null || true
     cp -rn "$temp_dir"/ruby_gems/gems/* "$temp_dir"/bundle/gems/ 2>/dev/null || true
     cp -rn "$temp_dir"/ruby_gems/extensions/* "$temp_dir"/bundle/extensions/ 2>/dev/null || true
     rm -rf "$temp_dir"/ruby_gems
   fi
-  $DOCKER rm -f "$temp_container" >/dev/null
+  $CONTAINER_ENGINE rm -f "$temp_container" >/dev/null
 fi
 
-run_opts=(-t -v "$PWD":/scan:ro -u "$(id -u):$(id -g)")
-if [[ "$DOCKER" == "podman" ]]; then
-  run_opts+=(--security-opt label=disable)
-fi
+BUNDLE_MOUNT=()
 if [[ -n "$temp_dir" ]]; then
-  run_opts+=(-v "$temp_dir"/bundle:/usr/local/bundle:ro)
+  BUNDLE_MOUNT=(-v "$temp_dir"/bundle:/usr/local/bundle:ro)
 fi
+readonly BUNDLE_MOUNT
 
-$DOCKER container run \
+$CONTAINER_ENGINE container run \
   --name "license_finder_$(uuidgen | head -c8)" \
   --rm \
-  "${run_opts[@]}" \
+  -t \
+  "${ENGINE_OPTS[@]}" \
+  -v "$PWD":/scan:ro \
+  "${BUNDLE_MOUNT[@]}" \
   ghcr.io/shakiyam/license_finder "${args[@]+${args[@]}}"
