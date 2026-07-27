@@ -1,7 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    csv (3.3.5)
+    csv (3.3.6)
     license_finder (7.2.1)
       bundler
       csv (~> 3.2)
