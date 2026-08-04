@@ -6,11 +6,11 @@ LicenseFinder-docker
 How to Use
 ----------
 
+If your project's gems are installed locally, run:
+
 ```console
 ./license_finder
 ```
-
-### Scanning with a pre-built image
 
 If your project's gems are already installed in a Docker image, use `--from-image` to scan against that image:
 
