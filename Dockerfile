@@ -13,7 +13,8 @@ ENV GEM_PATH=/opt/lf_bundle/current:/usr/local/bundle
 ENV PATH=/opt/lf_bundle/current/bin:$PATH
 WORKDIR /scan
 VOLUME /scan
-USER nobody:nogroup
+# nobody:nogroup
+USER 65534:65534
 ENV HOME=/tmp
 ARG SOURCE_COMMIT
 ENV SOURCE_COMMIT=$SOURCE_COMMIT
