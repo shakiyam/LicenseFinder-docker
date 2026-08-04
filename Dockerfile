@@ -17,5 +17,5 @@ VOLUME /scan
 USER 65534:65534
 ENV HOME=/tmp
 ARG SOURCE_COMMIT
-ENV SOURCE_COMMIT=$SOURCE_COMMIT
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 ENTRYPOINT ["license_finder"]
