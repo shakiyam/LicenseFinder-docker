@@ -1,20 +1,17 @@
 #!/bin/bash
 set -Eeu -o pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-readonly SCRIPT_DIR
-# shellcheck disable=SC1091
-. "$SCRIPT_DIR"/tools/colored_echo.sh
-# shellcheck disable=SC1091
-. "$SCRIPT_DIR"/tools/container_engine.sh
-
-CONTAINER_ENGINE=$(detect_container_engine)
-readonly CONTAINER_ENGINE
-if [[ $CONTAINER_ENGINE == docker ]]; then
+if command -v docker &>/dev/null; then
+  CONTAINER_ENGINE=docker
   ENGINE_OPTS=(-u "$(id -u):$(id -g)")
-else
+elif command -v podman &>/dev/null; then
+  CONTAINER_ENGINE=podman
   ENGINE_OPTS=(--security-opt label=disable)
+else
+  echo "Neither docker nor podman is installed." >&2
+  exit 1
 fi
+readonly CONTAINER_ENGINE
 readonly ENGINE_OPTS
 
 from_image=""
