@@ -34,12 +34,33 @@ jobs:
         run: make --keep-going lint
         env:
           GH_TOKEN: ${{ github.token }}
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          build-args: SOURCE_COMMIT=${{ github.sha }}
+          platforms: linux/amd64
+          load: true
+          no-cache: true
+          tags: ghcr.io/shakiyam/license_finder:latest
+          cache-to: type=gha,scope=ci-${{ github.run_id }},mode=max
+      - name: Run make test
+        run: make test
   build:
     name: Build and Push
     permissions:
       contents: read
       packages: write
-    needs: [format, lint]
+    needs: [format, lint, test]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -68,6 +89,7 @@ jobs:
           build-args: SOURCE_COMMIT=${{ github.sha }}
           platforms: linux/amd64, linux/arm64
           push: true
+          cache-from: type=gha,scope=ci-${{ github.run_id }}
           tags: |
             docker.io/shakiyam/license_finder:latest
             ghcr.io/shakiyam/license_finder:latest
