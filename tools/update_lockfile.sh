@@ -8,7 +8,7 @@ readonly SCRIPT_DIR
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR"/container_engine.sh
 
-readonly RUBY_IMAGE="docker.io/library/ruby:4.0.6-slim-trixie"
+readonly RUBY_IMAGE="docker.io/library/ruby:4.0.7-slim-trixie"
 
 CONTAINER_ENGINE=$(detect_container_engine)
 readonly CONTAINER_ENGINE
