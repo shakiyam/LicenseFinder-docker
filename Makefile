@@ -30,7 +30,7 @@ check_for_image_updates: ## Check for image updates
 
 check_for_library_updates: ## Check for library updates
 	@echo -e "\033[36m$@\033[0m"
-	@./tools/update_lockfile.sh
+	@./tools/update_gemfile_lock.sh
 
 check_for_updates: check_for_action_updates check_for_image_updates check_for_library_updates ## Check for updates to all dependencies
 

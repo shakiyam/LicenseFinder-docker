@@ -21,7 +21,7 @@ readonly ENGINE_OPTS
 
 [[ -e Gemfile.lock ]] || touch Gemfile.lock
 $CONTAINER_ENGINE container run \
-  --name "update_lockfile_$(uuidgen | head -c8)" \
+  --name "update_gemfile_lock_$(uuidgen | head -c8)" \
   --rm \
   "${ENGINE_OPTS[@]}" \
   -v "$PWD/Gemfile":/work/Gemfile:ro \
