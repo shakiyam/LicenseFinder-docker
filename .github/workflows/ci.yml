@@ -62,6 +62,7 @@ jobs:
       packages: write
     needs: [format, lint, test]
     if: github.event_name == 'push'
+    environment: docker-hub
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
