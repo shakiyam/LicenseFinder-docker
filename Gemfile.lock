@@ -11,10 +11,12 @@ GEM
       with_env (= 1.1.0)
       xml-simple (~> 1.1.9)
     logger (1.7.0)
+    racc (1.8.1)
     rexml (3.4.4)
     rubyzip (2.4.1)
     thor (1.5.0)
-    tomlrb (2.0.4)
+    tomlrb (2.0.5)
+      racc (~> 1.4)
     with_env (1.1.0)
     xml-simple (1.1.9)
       rexml
