@@ -59,7 +59,7 @@ jobs:
     name: Build and Push
     permissions:
       contents: read
-      packages: write
+      packages: write # Push images to GitHub Container Registry
     needs: [format, lint, test]
     if: github.event_name == 'push'
     environment: docker-hub
