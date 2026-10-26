@@ -1,4 +1,4 @@
-FROM docker.io/library/ruby:4.0.8-slim-trixie AS builder
+FROM docker.io/library/ruby:4.0.9-slim-trixie AS builder
 WORKDIR /root
 COPY Gemfile /root/
 COPY Gemfile.lock /root/
@@ -11,7 +11,7 @@ RUN apt-get update \
   && rm -rf /opt/lf_bundle/cache/*.gem \
   && find /opt/lf_bundle/ruby/*/gems/ -regex ".*\.[cho]" -delete
 
-FROM docker.io/library/ruby:4.0.8-slim-trixie
+FROM docker.io/library/ruby:4.0.9-slim-trixie
 COPY --from=builder /opt/lf_bundle /opt/lf_bundle
 RUN ruby_abi=$(ruby -e 'puts RbConfig::CONFIG["ruby_version"]') \
   && echo "GEM_PATH=/opt/lf_bundle/ruby/$ruby_abi:/usr/local/bundle" >>/etc/environment \
