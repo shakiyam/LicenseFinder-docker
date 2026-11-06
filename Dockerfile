@@ -2,11 +2,17 @@ FROM docker.io/library/ruby:4.0.9-slim-trixie AS builder
 WORKDIR /root
 COPY Gemfile /root/
 COPY Gemfile.lock /root/
+# TODO: Remove rubyzip override once license_finder allows rubyzip >= 3.4.0 (CVE-2026-85396)
 # hadolint ignore=DL3008
 RUN apt-get update \
   && apt-get -y --no-install-recommends install build-essential \
   && rm -rf /var/lib/apt/lists/* \
   && BUNDLE_PATH=/opt/lf_bundle bundle install \
+  && gem_dir=/opt/lf_bundle/ruby/$(ruby -e 'puts RbConfig::CONFIG["ruby_version"]') \
+  && gem install --install-dir "$gem_dir" --no-document rubyzip -v 3.7.0 \
+  && gem uninstall --install-dir "$gem_dir" --ignore-dependencies rubyzip -v 2.4.1 \
+  && sed -i 's/%q<rubyzip>.freeze, \[">= 1".freeze, "< 3".freeze\]/%q<rubyzip>.freeze, [">= 3.4.0".freeze, "< 4".freeze]/' "$gem_dir"/specifications/license_finder-*.gemspec \
+  && grep -F -q '%q<rubyzip>.freeze, [">= 3.4.0".freeze, "< 4".freeze]' "$gem_dir"/specifications/license_finder-*.gemspec \
   && rm -rf /root/.bundle/cache \
   && rm -rf /opt/lf_bundle/cache/*.gem \
   && find /opt/lf_bundle/ruby/*/gems/ -regex ".*\.[cho]" -delete

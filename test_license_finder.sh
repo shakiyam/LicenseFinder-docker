@@ -25,7 +25,7 @@ WORK_DIR=$(mktemp -d)
 readonly WORK_DIR
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-cp "$SCRIPT_DIR"/Gemfile "$SCRIPT_DIR"/Gemfile.lock "$WORK_DIR"/
+cp "$SCRIPT_DIR"/Gemfile "$WORK_DIR"/
 
 if ! $CONTAINER_ENGINE container run \
   --name "test_license_finder_$(uuidgen | head -c8)" \
@@ -59,6 +59,33 @@ if ! JSON_LOADED=$($CONTAINER_ENGINE container run \
     exit(Gem::Version.new(JSON::VERSION) >= Gem::Version.new("2.19.9") && path.start_with?("/opt/lf_bundle/"))
   '); then
   echo_error "Test failed: json ${JSON_LOADED} is loaded instead of >= 2.19.9 from /opt/lf_bundle."
+  exit 1
+fi
+
+# TODO: Remove once license_finder allows rubyzip >= 3.4.0 (CVE-2026-85396)
+if ! RUBYZIP_RESULT=$($CONTAINER_ENGINE container run \
+  --name "test_license_finder_$(uuidgen | head -c8)" \
+  --rm \
+  --pull=never \
+  "${ENGINE_OPTS[@]}" \
+  --entrypoint ruby \
+  "$IMAGE_NAME" -e '
+    require "license_finder"
+    require "tmpdir"
+    require "zip/version"
+    mit = File.read(File.join(Gem.loaded_specs["license_finder"].full_gem_path, "lib/license_finder/license/templates/MIT.txt"))
+    licenses = Dir.mktmpdir do |dir|
+      jar = File.join(dir, "test.jar")
+      Zip::OutputStream.open(jar) do |zip|
+        zip.put_next_entry("META-INF/LICENSE")
+        zip.write(mit)
+      end
+      LicenseFinder::LicenseFiles.find(jar).map { |file| file.license.name }
+    end
+    puts "rubyzip #{Zip::VERSION} found #{licenses.inspect}"
+    exit(Gem::Version.new(Zip::VERSION) >= Gem::Version.new("3.4.0") && licenses == ["MIT"])
+  ' 2>&1); then
+  echo_error "Test failed: ${RUBYZIP_RESULT} instead of rubyzip >= 3.4.0 found [\"MIT\"]."
   exit 1
 fi
 
