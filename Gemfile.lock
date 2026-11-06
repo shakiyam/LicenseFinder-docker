@@ -2,6 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     csv (3.3.7)
+    json (3.1.0)
     license_finder (7.2.1)
       bundler
       csv (~> 3.2)
@@ -26,6 +27,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  json (>= 2.19.9)
   license_finder
   logger
 

@@ -12,11 +12,16 @@ RUN apt-get update \
   && find /opt/lf_bundle/ruby/*/gems/ -regex ".*\.[cho]" -delete
 
 FROM docker.io/library/ruby:4.0.9-slim-trixie
+# TODO: Remove json cleanup once base image includes json >= 2.19.9 (CVE-2026-33210, CVE-2026-54696)
 # TODO: Remove package upgrades once base image includes apt and libapt-pkg7.0 >= 3.0.4 (CVE-2026-109518)
 # hadolint ignore=DL3008
 RUN apt-get update \
   && apt-get -y --no-install-recommends --only-upgrade install apt libapt-pkg7.0 \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* \
+  && rm -f /usr/local/lib/ruby/gems/*/specifications/default/json-*.gemspec \
+  && ruby_lib=$(ruby -e 'puts RbConfig::CONFIG["rubylibdir"]') \
+  && ruby_arch=$(ruby -e 'puts RbConfig::CONFIG["rubyarchdir"]') \
+  && rm -r "$ruby_lib/json.rb" "$ruby_lib/json" "$ruby_arch/json"
 COPY --from=builder /opt/lf_bundle /opt/lf_bundle
 RUN ruby_abi=$(ruby -e 'puts RbConfig::CONFIG["ruby_version"]') \
   && echo "GEM_PATH=/opt/lf_bundle/ruby/$ruby_abi:/usr/local/bundle" >>/etc/environment \

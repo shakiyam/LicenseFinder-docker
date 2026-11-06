@@ -44,4 +44,22 @@ if ! grep -q '^license_finder, ' "$WORK_DIR"/report.csv; then
   exit 1
 fi
 
+# TODO: Remove once base image includes json >= 2.19.9 (CVE-2026-33210, CVE-2026-54696)
+# shellcheck disable=SC2016
+if ! JSON_LOADED=$($CONTAINER_ENGINE container run \
+  --name "test_license_finder_$(uuidgen | head -c8)" \
+  --rm \
+  --pull=never \
+  "${ENGINE_OPTS[@]}" \
+  --entrypoint ruby \
+  "$IMAGE_NAME" -e '
+    require "json"
+    path = $LOADED_FEATURES.grep(%r{/json/version\.rb\z}).first.to_s
+    puts "#{JSON::VERSION} from #{path}"
+    exit(Gem::Version.new(JSON::VERSION) >= Gem::Version.new("2.19.9") && path.start_with?("/opt/lf_bundle/"))
+  '); then
+  echo_error "Test failed: json ${JSON_LOADED} is loaded instead of >= 2.19.9 from /opt/lf_bundle."
+  exit 1
+fi
+
 echo_success 'Test passed: license_finder generated a report successfully.'
