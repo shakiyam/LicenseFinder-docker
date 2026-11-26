@@ -18,6 +18,11 @@ RUN apt-get update \
   && find /opt/lf_bundle/ruby/*/gems/ -regex ".*\.[cho]" -delete
 
 FROM docker.io/library/ruby:4.0.10-slim-trixie
+# TODO: Remove package upgrades once base image includes libzstd1 >= 1.5.7+dfsg-1+deb13u1 (CVE-2026-124851)
+# hadolint ignore=DL3008
+RUN apt-get update \
+  && apt-get -y --no-install-recommends --only-upgrade install libzstd1 \
+  && rm -rf /var/lib/apt/lists/*
 # TODO: Remove json cleanup once base image includes json >= 2.19.9 (CVE-2026-33210, CVE-2026-54696)
 RUN rm -f /usr/local/lib/ruby/gems/*/specifications/default/json-*.gemspec \
   && ruby_lib=$(ruby -e 'puts RbConfig::CONFIG["rubylibdir"]') \
